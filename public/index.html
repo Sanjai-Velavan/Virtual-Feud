@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Virtual Feud</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#f5c518;--gold2:#c9a010;
+  --navy:#07111f;--panel:#0d1e36;--panel2:#112347;--border:#1b3358;
+  --red:#e63946;--green:#27ae60;
+  --gray:#4e6a8a;--white:#fff;
+  --t1:#e63946;--t2:#1e6ef5;--t3:#a855f7;
+}
+html,body{height:100%;font-family:'Segoe UI',Arial,sans-serif;background:var(--navy);color:var(--white);overflow:hidden}
+#app{display:flex;height:100%;gap:0}
+#main{flex:1;min-width:0;display:flex;flex-direction:column;border-right:2px solid var(--border);overflow:hidden}
+
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:.7rem;padding:.65rem 1rem;background:rgba(0,0,0,.35);border-bottom:2px solid var(--border)}
+.logo{font-size:1.3rem;font-weight:900;color:var(--gold);letter-spacing:2px;text-transform:uppercase;flex-shrink:0}
+.spacer{flex:1}
+.nav-btn{background:var(--panel2);border:1.5px solid var(--border);color:var(--white);border-radius:8px;padding:.45rem .9rem;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.nav-btn:hover{background:var(--border);border-color:var(--gold)}
+.nav-btn:disabled{opacity:.3;cursor:default}
+.q-counter{font-size:.8rem;font-weight:700;color:var(--gray);background:var(--panel);border:1.5px solid var(--border);border-radius:8px;padding:.45rem .8rem;flex-shrink:0;letter-spacing:.5px}
+
+.q-block{flex-shrink:0;padding:.8rem 1.1rem .5rem}
+.cat-chip{display:inline-block;font-size:.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--gray);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:.22rem .75rem;margin-bottom:.5rem}
+.q-text{font-size:clamp(1.05rem,2.8vw,1.55rem);font-weight:800;color:var(--gold);line-height:1.35}
+.q-text.code-q{font-family:'Consolas','Courier New',monospace;font-size:clamp(.78rem,1.8vw,1rem);font-weight:600;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;white-space:pre;overflow-x:auto;color:#e2c97e}
+
+.reveal-bar{flex-shrink:0;padding:.4rem 1.1rem .3rem;display:flex;align-items:center;gap:.8rem}
+.btn-reveal{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;border:none;border-radius:9px;padding:.55rem 1.4rem;font-size:.95rem;font-weight:800;cursor:pointer;letter-spacing:.5px;box-shadow:0 3px 14px rgba(245,197,24,.35);transition:box-shadow .2s,opacity .2s;-webkit-tap-highlight-color:transparent}
+.btn-reveal:hover{box-shadow:0 4px 22px rgba(245,197,24,.6)}
+.btn-reveal:disabled,.btn-reveal.hidden{opacity:0;pointer-events:none}
+.btn-reset-ans{background:transparent;border:1.5px solid var(--border);color:var(--gray);border-radius:8px;padding:.5rem .8rem;font-size:.82rem;cursor:pointer}
+.reveal-hint{font-size:.78rem;color:var(--gray);font-style:italic}
+
+.answers-wrap{flex:1;overflow-y:auto;padding:.4rem 1.1rem 1.2rem}
+
+.ans-row{display:flex;align-items:center;gap:.7rem;background:var(--panel);border:1.5px solid var(--border);border-radius:12px;padding:.7rem 1rem;margin-bottom:.45rem;min-height:58px;transition:border-color .3s,box-shadow .3s,opacity .3s}
+.ans-row.awarded-t1{border-color:var(--t1);box-shadow:0 0 10px rgba(230,57,70,.2)}
+.ans-row.awarded-t2{border-color:var(--t2);box-shadow:0 0 10px rgba(30,110,245,.2)}
+.ans-row.awarded-t3{border-color:var(--t3);box-shadow:0 0 10px rgba(168,85,247,.2)}
+/* tech question rows */
+.ans-row.tech-correct{border-color:rgba(39,174,96,.55);background:rgba(39,174,96,.08)}
+.ans-row.tech-wrong{opacity:.45}
+
+.ans-num{font-size:1rem;font-weight:900;color:var(--gold);min-width:26px;text-align:center;flex-shrink:0}
+.ans-hidden-bar{flex:1;height:13px;border-radius:6px;background:repeating-linear-gradient(90deg,var(--border) 0,var(--border) 14px,transparent 14px,transparent 20px);opacity:.5}
+.ans-text{flex:1;font-size:clamp(.92rem,2.4vw,1.05rem);font-weight:700;line-height:1.3;display:none}
+.ans-pts{font-size:1.35rem;font-weight:900;color:var(--gold);min-width:40px;text-align:right;flex-shrink:0;display:none}
+.ans-pts.dim{color:var(--gray);font-size:.85rem;opacity:.5}
+
+.award-btns{display:none;gap:.4rem;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:200px}
+.award-btn{border:2px solid transparent;border-radius:7px;padding:.38rem .6rem;font-size:.75rem;font-weight:800;cursor:pointer;transition:background .15s,border-color .15s,opacity .2s;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.award-btn.t1{background:rgba(230,57,70,.15);border-color:var(--t1);color:var(--t1)}
+.award-btn.t1:hover,.award-btn.t1.chosen{background:var(--t1);color:#fff}
+.award-btn.t2{background:rgba(30,110,245,.15);border-color:var(--t2);color:var(--t2)}
+.award-btn.t2:hover,.award-btn.t2.chosen{background:var(--t2);color:#fff}
+.award-btn.t3{background:rgba(168,85,247,.15);border-color:var(--t3);color:var(--t3)}
+.award-btn.t3:hover,.award-btn.t3.chosen{background:var(--t3);color:#fff}
+.award-btn.unchosen{opacity:.35}
+
+.ans-row.revealed .ans-hidden-bar{display:none}
+.ans-row.revealed .ans-text{display:block}
+.ans-row.revealed .ans-pts{display:block}
+.ans-row.revealed .award-btns{display:flex}
+
+/* ══ SIDEBAR ══ */
+#sidebar{width:230px;flex-shrink:0;display:flex;flex-direction:column;background:var(--panel);overflow:hidden}
+.sb-header{flex-shrink:0;padding:.65rem .9rem .4rem;border-bottom:2px solid var(--border);font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--gray)}
+.team-card{padding:.65rem .9rem;border-bottom:2px solid var(--border);flex-shrink:0}
+.team-card .tc-name{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem}
+.tc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.tc-name-edit{background:transparent;border:none;outline:none;color:inherit;font:inherit;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:text;width:100%}
+.tc-name-edit:focus{background:var(--panel2);border-radius:5px;padding:0 4px}
+.team-card .tc-score{font-size:1.9rem;font-weight:900;color:var(--gold);line-height:1}
+.team-card.leading .tc-score{text-shadow:0 0 18px rgba(245,197,24,.5)}
+
+.sb-log-header{flex-shrink:0;padding:.45rem .9rem .3rem;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--gray);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.4rem}
+.sb-log-header span{flex:1}
+.log-hint{font-size:.58rem;letter-spacing:1px;color:var(--border);font-style:italic;text-transform:none}
+.sb-log{flex:1;overflow-y:auto;padding:.3rem .5rem .8rem}
+.log-item{font-size:.71rem;padding:.35rem .45rem;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:.4rem;line-height:1.3;color:var(--gray);cursor:pointer;border-radius:6px;transition:background .15s,color .15s;margin-bottom:1px}
+.log-item:hover{background:rgba(255,255,255,.07);color:var(--white)}
+.log-item.has-score{color:rgba(255,255,255,.72)}
+.log-item.current{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.28);color:var(--white)}
+.log-item.current .log-q{color:var(--gold)}
+.log-q{flex-shrink:0;font-weight:800;min-width:30px;color:var(--gray)}
+.log-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-pts-wrap{display:flex;flex-direction:column;gap:1px;align-items:flex-end;flex-shrink:0}
+.log-pts{font-weight:800;font-size:.66rem;white-space:nowrap}
+.log-pts.lp0{color:var(--t1)}.log-pts.lp1{color:var(--t2)}.log-pts.lp2{color:var(--t3)}
+
+.btn-reset-all{flex-shrink:0;margin:.55rem;padding:.5rem;background:transparent;border:1.5px solid var(--border);color:var(--gray);border-radius:8px;font-size:.73rem;cursor:pointer;text-align:center}
+.btn-reset-all:hover{border-color:var(--red);color:var(--red)}
+
+@media(max-width:600px){
+  #app{flex-direction:column}
+  #main{border-right:none;border-bottom:2px solid var(--border)}
+  #sidebar{width:100%;flex-direction:row;height:auto;flex-shrink:0;max-height:90px}
+  .sb-log,.sb-log-header,.btn-reset-all{display:none}
+  .team-card{flex:1;border-bottom:none;border-right:2px solid var(--border);padding:.4rem .6rem}
+  .team-card:last-of-type{border-right:none}
+  .tc-score{font-size:1.4rem!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="main">
+    <div class="topbar">
+      <div class="logo">⚡ Feud</div>
+      <div class="spacer"></div>
+      <button class="nav-btn" id="btn-prev" onclick="goTo(cur-1)" disabled>← Prev</button>
+      <div class="q-counter" id="q-counter">Q 1 / 29</div>
+      <button class="nav-btn" id="btn-next" onclick="goTo(cur+1)">Next →</button>
+    </div>
+
+    <div class="q-block">
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.5rem">
+        <div class="cat-chip" id="cat-chip">Category</div>
+      </div>
+      <div class="q-text" id="q-text">Loading…</div>
+      <!-- tech round: pts + team award buttons shown here, hidden for feud questions -->
+      <div id="q-award-bar" style="display:none;margin-top:.75rem;align-items:center;gap:.6rem;flex-wrap:wrap">
+        <span id="q-pts-badge" style="font-size:.8rem;font-weight:800;color:var(--gold);background:rgba(245,197,24,.12);border:1.5px solid rgba(245,197,24,.35);border-radius:20px;padding:.25rem .85rem;letter-spacing:.5px"></span>
+        <button class="award-btn t1" id="qab-0" onclick="awardTechQ(0)">Titans</button>
+        <button class="award-btn t2" id="qab-1" onclick="awardTechQ(1)">CAD</button>
+        <button class="award-btn t3" id="qab-2" onclick="awardTechQ(2)">The Vibe Tribe</button>
+      </div>
+    </div>
+
+    <div class="reveal-bar">
+      <button class="btn-reveal" id="btn-reveal" onclick="revealAll()">▶ Reveal Answers</button>
+      <button class="btn-reset-ans" onclick="resetAnswers()">↺ Hide</button>
+      <span class="reveal-hint" id="reveal-hint">Tap to reveal all answers at once</span>
+    </div>
+
+    <div class="answers-wrap" id="answers-wrap"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sb-header">Scoreboard</div>
+    <div class="team-card" id="tc0">
+      <div class="tc-name">
+        <div class="tc-dot" style="background:var(--t1)"></div>
+        <input class="tc-name-edit" id="tname0" value="Titans" maxlength="20"
+               oninput="renameTeam(0,this.value)" onblur="refreshLog()"/>
+      </div>
+      <div class="tc-score" id="tscore0">0</div>
+    </div>
+    <div class="team-card" id="tc1">
+      <div class="tc-name">
+        <div class="tc-dot" style="background:var(--t2)"></div>
+        <input class="tc-name-edit" id="tname1" value="CAD" maxlength="20"
+               oninput="renameTeam(1,this.value)" onblur="refreshLog()"/>
+      </div>
+      <div class="tc-score" id="tscore1">0</div>
+    </div>
+    <div class="team-card" id="tc2">
+      <div class="tc-name">
+        <div class="tc-dot" style="background:var(--t3)"></div>
+        <input class="tc-name-edit" id="tname2" value="The Vibe Tribe" maxlength="20"
+               oninput="renameTeam(2,this.value)" onblur="refreshLog()"/>
+      </div>
+      <div class="tc-score" id="tscore2">0</div>
+    </div>
+    <div class="sb-log-header">
+      <span>Question Log</span>
+      <span class="log-hint">tap to jump</span>
+    </div>
+    <div class="sb-log" id="sb-log"></div>
+    <button class="btn-reset-all" onclick="resetAll()">🔄 Reset Everything</button>
+  </div>
+
+</div>
+<script>
+const QS = [
+  {id:1,  cat:"💼 Work & Daily Life",
+   q:"First thing someone does when they log in",
+   a:[{t:"Check emails",p:40},{t:"Open Teams / Slack",p:25},{t:"Make coffee / tea",p:20},{t:"Check calendar",p:10},{t:"Browse news / social media",p:5}]},
+  {id:2,  cat:"💼 Work & Daily Life",
+   q:"Reason a colleague shows up late to a meeting",
+   a:[{t:"Previous meeting overran",p:35},{t:"Forgot the meeting",p:25},{t:"Internet issues",p:20},{t:"Calendar confusion",p:10},{t:"Was on a personal break",p:10}]},
+  {id:3,  cat:"💼 Work & Daily Life",
+   q:"Excuse someone gives for not turning the camera on",
+   a:[{t:"Bad internet",p:30},{t:"Not looking presentable",p:25},{t:"Camera not working",p:20},{t:"Multitasking",p:15},{t:"Privacy concerns",p:10}]},
+  {id:4,  cat:"💼 Work & Daily Life",
+   q:"Something found cluttering a colleague's desk",
+   a:[{t:"Papers / notebooks",p:30},{t:"Coffee mugs",p:25},{t:"Cables / chargers",p:20},{t:"Snacks",p:15},{t:"Sticky notes",p:10}]},
+  {id:5,  cat:"💼 Work & Daily Life",
+   q:"A common workplace complaint",
+   a:[{t:"Too many meetings",p:35},{t:"Heavy workload",p:25},{t:"Tight deadlines",p:20},{t:"Email overload",p:10},{t:"Lack of communication",p:10}]},
+  {id:6,  cat:"📞 Meetings & Communication",
+   q:"A phrase that gets overused in meetings",
+   a:[{t:"Let's circle back",p:30},{t:"Can you hear me?",p:25},{t:"You're on mute",p:20},{t:"Let's take it offline",p:15},{t:"Quick sync",p:10}]},
+  {id:7,  cat:"📞 Meetings & Communication",
+   q:"Something that makes a meeting feel boring",
+   a:[{t:"Goes on too long",p:40},{t:"No clear agenda",p:25},{t:"One person does all the talking",p:15},{t:"Same things said again",p:10},{t:"No participation",p:10}]},
+  {id:8,  cat:"📞 Meetings & Communication",
+   q:"Something people secretly do during a long meeting",
+   a:[{t:"Check their phone",p:30},{t:"Browse the internet",p:25},{t:"Reply to other emails",p:20},{t:"Eat snacks",p:15},{t:"Zone out",p:10}]},
+  {id:9,  cat:"🏠 Remote Work",
+   q:"A distraction someone faces while working from home",
+   a:[{t:"Family / kids",p:30},{t:"Phone notifications",p:25},{t:"TV in the background",p:20},{t:"Social media",p:15},{t:"Pets",p:10}]},
+  {id:10, cat:"🏠 Remote Work",
+   q:"Something someone wears only for video calls",
+   a:[{t:"Formal shirt / top",p:45},{t:"Pajama bottoms underneath",p:25},{t:"A blazer",p:15},{t:"Stylish accessories",p:10},{t:"Slippers",p:5}]},
+  {id:11, cat:"🏠 Remote Work",
+   q:"The go-to 'technical issues' excuse one uses",
+   a:[{t:"Internet lag",p:40},{t:"Mic not working",p:20},{t:"App crashed",p:20},{t:"System restart",p:10},{t:"Power issue",p:10}]},
+  {id:12, cat:"🍕 Office Food & Fun",
+   q:"A popular snack found at the office",
+   a:[{t:"Biscuits / cookies",p:30},{t:"Chips",p:25},{t:"Fruits",p:15},{t:"Chocolate",p:15},{t:"Nuts",p:15}]},
+  {id:13, cat:"🍕 Office Food & Fun",
+   q:"An activity people enjoy at an office party",
+   a:[{t:"Eating",p:30},{t:"Games",p:25},{t:"Music / dancing",p:20},{t:"Team bonding activities",p:15},{t:"Group photos",p:10}]},
+  {id:14, cat:"🍕 Office Food & Fun",
+   q:"What people look forward to most on a Friday",
+   a:[{t:"The weekend",p:45},{t:"Logging off early",p:25},{t:"Team lunch",p:15},{t:"The casual vibe",p:10},{t:"End-of-week activities",p:5}]},
+  {id:15, cat:"👥 Colleagues & Behavior",
+   q:"A type of colleague everyone has worked with",
+   a:[{t:"The overachiever",p:30},{t:"The late responder",p:25},{t:"The office joker",p:20},{t:"The quiet one",p:15},{t:"The one who's always busy",p:10}]},
+  {id:16, cat:"👥 Colleagues & Behavior",
+   q:"Something a colleague does that tends to annoy others",
+   a:[{t:"Replying late",p:30},{t:"Interrupting mid-sentence",p:25},{t:"Talking too loudly",p:20},{t:"Forgetting to mute",p:15},{t:"Missing deadlines",p:10}]},
+  {id:17, cat:"👥 Colleagues & Behavior",
+   q:"Something a new employee tends to struggle with",
+   a:[{t:"Getting familiar with tools",p:30},{t:"Understanding company processes",p:25},{t:"Getting to know people",p:20},{t:"Managing work expectations",p:15},{t:"Internal communication",p:10}]},
+  {id:18, cat:"👥 Colleagues & Behavior",
+   q:"Something colleagues tend to bond over",
+   a:[{t:"Food",p:30},{t:"Shared work struggles",p:25},{t:"TV shows / movies",p:20},{t:"Memes",p:15},{t:"Weekend plans",p:10}]},
+  {id:19, cat:"💻 Tech & Tools",
+   q:"Excuse someone gives for missing a deadline",
+   a:[{t:"Waiting on inputs from someone else",p:35},{t:"System / tool issues",p:25},{t:"Brief wasn't clear",p:20},{t:"Too many meetings to focus",p:12},{t:"Still perfecting it",p:8}]},
+  {id:20, cat:"💻 Tech & Tools",
+   q:"Something one always seems to forget the password for",
+   a:[{t:"Email",p:30},{t:"VPN",p:25},{t:"Internal tools",p:20},{t:"Laptop login",p:15},{t:"HR portal",p:10}]},
+  {id:21, cat:"🎂 3rd Anniversary",
+   q:"Reasons one is still with the organisation after 3 years",
+   a:[{t:"Love the team",p:38},{t:"Good pay",p:27},{t:"Comfortable routine",p:18},{t:"Too comfortable to leave",p:10},{t:"Still figuring that out",p:7}]},
+  {id:22, cat:"🎉 Bonus Fun",
+   q:"Something someone says out loud while accidentally on mute",
+   a:[{t:"A full explanation",p:40},{t:"The answer to a question",p:25},{t:"A joke",p:15},{t:"A greeting",p:10},{t:"A strong opinion",p:10}]},
+  {id:23, cat:"🎉 Bonus Fun",
+   q:"An unusual place someone has joined a meeting from",
+   a:[{t:"The car",p:35},{t:"The bathroom (audio only 😄)",p:20},{t:"The kitchen",p:20},{t:"Outdoors",p:15},{t:"In bed",p:10}]},
+  {id:24, cat:"🎉 Bonus Fun",
+   q:"Something one wishes they could say to their boss",
+   a:[{t:"There are too many meetings",p:30},{t:"I need more time",p:25},{t:"You're doing a great job!",p:15},{t:"Let's simplify things",p:15},{t:"I deserve a raise",p:15}]},
+  // ── Technical Round ────────────────────────────────────────────────────────
+  {id:25, cat:"🖥️ Technical Round", techQ:true,
+   q:"What is the output of print(int('101', 2))?",
+   a:[
+     {t:"A.  5",    p:40, correct:true},
+     {t:"B.  101",  p:0,  correct:false},
+     {t:"C.  2",    p:0,  correct:false},
+     {t:"D.  Error",p:0,  correct:false}
+   ]},
+  {id:26, cat:"🖥️ Technical Round", techQ:true,
+   q:"What does Temperature control in an AI model?",
+   a:[
+     {t:"A.  Speed of response generation",           p:0,  correct:false},
+     {t:"B.  Randomness and creativity of responses",  p:20, correct:true},
+     {t:"C.  Size of the model",                      p:0,  correct:false},
+     {t:"D.  Number of tokens processed",             p:0,  correct:false}
+   ]},
+  {id:27, cat:"🖥️ Technical Round", techQ:true, codeQ:true,
+   q:"SELECT e.name, e.salary, m.name, m.salary\nFROM employees e\nJOIN employees m ON e.manager_id = m.emp_id\nWHERE e.salary > m.salary;",
+   a:[
+     {t:"A.  All employees",                               p:0,  correct:false},
+     {t:"B.  Employees earning more than their managers",   p:30, correct:true},
+     {t:"C.  Managers earning more than employees",        p:0,  correct:false},
+     {t:"D.  A list of salary comparisons",                p:0,  correct:false}
+   ]},
+  {id:28, cat:"🖥️ Technical Round", techQ:true,
+   q:"What happens when a REST API receives JSON data?",
+   a:[
+     {t:"A.  Serialization",   p:0,  correct:false},
+     {t:"B.  Deserialization", p:40, correct:true},
+     {t:"C.  Compilation",     p:0,  correct:false},
+     {t:"D.  Encryption",      p:0,  correct:false}
+   ]},
+  {id:29, cat:"🖥️ Technical Round", techQ:true,
+   q:"A Spark job has one executor running for 30 minutes while all others finish in 5 minutes. What is the most likely issue?",
+   a:[
+     {t:"A.  Schema Evolution", p:0,  correct:false},
+     {t:"B.  Data Skew",        p:30, correct:true},
+     {t:"C.  Delta Cache",      p:0,  correct:false},
+     {t:"D.  Time Travel",      p:0,  correct:false}
+   ]}
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const N_TEAMS  = 3;
+let cur        = 0;
+let teamNames  = ['Titans', 'CAD', 'The Vibe Tribe'];
+let teamScores = [0, 0, 0];
+// techQ questions start already revealed
+const state = QS.map(q => ({ revealed: !!q.techQ, awards: [] }));
+
+function init() { goTo(0); refreshScoreboard(); }
+
+// ─── NAVIGATE ─────────────────────────────────────────────────────────────────
+function goTo(idx) {
+  if (idx < 0 || idx >= QS.length) return;
+  cur = idx;
+  const q = QS[cur];
+  const s = state[cur];
+  if (!s.awards.length) s.awards = new Array(q.a.length).fill(null);
+
+  // question heading
+  const qtEl = document.getElementById('q-text');
+  qtEl.className   = q.codeQ ? 'q-text code-q' : 'q-text';
+  qtEl.textContent = q.q;
+
+  document.getElementById('cat-chip').textContent  = q.cat;
+  document.getElementById('q-counter').textContent = `Q ${cur+1} / ${QS.length}`;
+  document.getElementById('btn-prev').disabled      = (cur === 0);
+  document.getElementById('btn-next').disabled      = (cur === QS.length - 1);
+
+  // show/hide award bar next to question for tech round
+  const awardBar = document.getElementById('q-award-bar');
+  if (q.techQ) {
+    const pts = q.a.find(a => a.correct)?.p || 0;
+    document.getElementById('q-pts-badge').textContent = `${pts} pts`;
+    for (let t = 0; t < N_TEAMS; t++)
+      document.getElementById(`qab-${t}`).textContent = teamNames[t];
+    awardBar.style.display = 'flex';
+    refreshTechAwardBar();
+  } else {
+    awardBar.style.display = 'none';
+  }
+
+  // reveal bar: hide for tech questions
+  const revealBtn  = document.getElementById('btn-reveal');
+  const revealHint = document.getElementById('reveal-hint');
+  if (q.techQ) {
+    revealBtn.classList.add('hidden');
+    revealHint.textContent = '';
+  } else {
+    revealBtn.classList.remove('hidden');
+    revealBtn.disabled       = s.revealed;
+    revealHint.textContent   = s.revealed ? 'All answers revealed' : 'Tap to reveal all answers at once';
+  }
+
+  buildAnswerRows(q, s);
+  refreshLog();
+}
+
+// ─── BUILD ROWS ───────────────────────────────────────────────────────────────
+function buildAnswerRows(q, s) {
+  const wrap = document.getElementById('answers-wrap');
+  wrap.innerHTML = '';
+
+  q.a.forEach((ans, i) => {
+    const awarded      = s.awards[i];
+    const isRevealed   = s.revealed;
+    const awardedClass = awarded === 0 ? ' awarded-t1'
+                       : awarded === 1 ? ' awarded-t2'
+                       : awarded === 2 ? ' awarded-t3' : '';
+    const row = document.createElement('div');
+    row.className = 'ans-row' + (isRevealed ? ' revealed' : '') + awardedClass;
+    row.id = `row-${i}`;
+
+    if (q.techQ) {
+      // plain option row — no points, no award buttons
+      row.innerHTML = `
+        <span class="ans-num" style="color:var(--gray)">${String.fromCharCode(64+i+1)}.</span>
+        <span class="ans-text" style="display:block;font-weight:600;color:var(--white)">${ans.t.replace(/^[A-D]\.\s+/,'')}</span>`;
+    } else {
+      const ptsHtml = `<span class="ans-pts">${ans.p}</span>`;
+      const btnHtml = [0,1,2].map(t => {
+        const sc = awarded === t ? 'chosen' : awarded !== null ? 'unchosen' : '';
+        return `<button class="award-btn t${t+1} ${sc}" onclick="award(${i},${t})">${teamNames[t]}</button>`;
+      }).join('');
+      row.innerHTML = `
+        <span class="ans-num">${i+1}</span>
+        <div class="ans-hidden-bar"></div>
+        <span class="ans-text">${ans.t}</span>
+        ${ptsHtml}
+        <div class="award-btns" id="ab-${i}">${btnHtml}</div>`;
+    }
+    wrap.appendChild(row);
+  });
+}
+
+// ─── REVEAL ALL (feud only) ───────────────────────────────────────────────────
+function revealAll() {
+  const s = state[cur];
+  const q = QS[cur];
+  if (q.techQ || s.revealed) return;
+  s.revealed = true;
+  document.getElementById('btn-reveal').disabled       = true;
+  document.getElementById('reveal-hint').textContent   = 'All answers revealed';
+  QS[cur].a.forEach((_, i) => {
+    document.getElementById(`row-${i}`)?.classList.add('revealed');
+  });
+}
+
+// ─── RESET / HIDE ─────────────────────────────────────────────────────────────
+function resetAnswers() {
+  const s = state[cur];
+  const q = QS[cur];
+  // clear awards
+  q.a.forEach((ans, i) => {
+    const old = s.awards[i];
+    if (old !== null) teamScores[old] -= ans.p;
+    s.awards[i] = null;
+  });
+  if (q.techQ) {
+    refreshTechAwardBar();
+  } else {
+    s.revealed = false;
+    document.getElementById('btn-reveal').disabled     = false;
+    document.getElementById('reveal-hint').textContent = 'Tap to reveal all answers at once';
+  }
+  refreshScoreboard();
+  buildAnswerRows(q, s);
+}
+
+// ─── TECH ROUND AWARD (question-level buttons) ────────────────────────────────
+function awardTechQ(teamIdx) {
+  const q          = QS[cur];
+  const correctIdx = q.a.findIndex(a => a.correct);
+  if (correctIdx === -1) return;
+  award(correctIdx, teamIdx);
+  refreshTechAwardBar();
+}
+
+function refreshTechAwardBar() {
+  const q          = QS[cur];
+  const s          = state[cur];
+  const correctIdx = q.a.findIndex(a => a.correct);
+  const awarded    = correctIdx !== -1 ? s.awards[correctIdx] : null;
+  for (let t = 0; t < N_TEAMS; t++) {
+    const btn = document.getElementById(`qab-${t}`);
+    if (!btn) continue;
+    btn.classList.remove('chosen','unchosen');
+    if (awarded !== null) btn.classList.add(t === awarded ? 'chosen' : 'unchosen');
+  }
+}
+
+// ─── AWARD ────────────────────────────────────────────────────────────────────
+function award(ansIdx, teamIdx) {
+  const s   = state[cur];
+  const pts = QS[cur].a[ansIdx].p;
+  const prev = s.awards[ansIdx];
+  if (pts === 0) return;
+
+  if (prev === teamIdx) {
+    teamScores[teamIdx] -= pts;
+    s.awards[ansIdx] = null;
+  } else {
+    if (prev !== null) teamScores[prev] -= pts;
+    teamScores[teamIdx] += pts;
+    s.awards[ansIdx] = teamIdx;
+  }
+
+  const newAward = s.awards[ansIdx];
+  const row      = document.getElementById(`row-${ansIdx}`);
+  row.classList.remove('awarded-t1','awarded-t2','awarded-t3');
+  if (newAward === 0) row.classList.add('awarded-t1');
+  if (newAward === 1) row.classList.add('awarded-t2');
+  if (newAward === 2) row.classList.add('awarded-t3');
+
+  document.querySelectorAll(`#ab-${ansIdx} .award-btn`).forEach((btn, bi) => {
+    btn.classList.remove('chosen','unchosen');
+    if (newAward !== null) btn.classList.add(bi === newAward ? 'chosen' : 'unchosen');
+  });
+
+  refreshScoreboard();
+}
+
+// ─── SCOREBOARD ───────────────────────────────────────────────────────────────
+function refreshScoreboard() {
+  const max      = Math.max(...teamScores);
+  const allEqual = teamScores.every(s => s === teamScores[0]);
+  for (let t = 0; t < N_TEAMS; t++) {
+    document.getElementById(`tscore${t}`).textContent = teamScores[t];
+    document.getElementById(`tc${t}`).classList.toggle('leading', !allEqual && teamScores[t] === max);
+  }
+  refreshLog();
+}
+
+// ─── LOG ──────────────────────────────────────────────────────────────────────
+function refreshLog() {
+  const log = document.getElementById('sb-log');
+  log.innerHTML = '';
+  QS.forEach((q, qi) => {
+    const s    = state[qi];
+    const qpts = new Array(N_TEAMS).fill(0);
+    s.awards.forEach((aw, ai) => { if (aw !== null) qpts[aw] += q.a[ai].p; });
+    const hasScore  = qpts.some(p => p > 0);
+    const isCurrent = qi === cur;
+
+    const item = document.createElement('div');
+    item.className = 'log-item' + (hasScore ? ' has-score' : '') + (isCurrent ? ' current' : '');
+    item.title     = `Q${qi+1}: ${q.q}`;
+    item.onclick   = () => goTo(qi);
+
+    const ptsWrap = hasScore
+      ? '<div class="log-pts-wrap">'
+        + qpts.map((p, t) => p > 0
+            ? `<span class="log-pts lp${t}">${teamNames[t]}: ${p}</span>` : '').join('')
+        + '</div>'
+      : '';
+
+    item.innerHTML = `
+      <span class="log-q">Q${qi+1}</span>
+      <span class="log-label">${q.q}</span>
+      ${ptsWrap}`;
+    log.appendChild(item);
+  });
+  const el = log.querySelector('.current');
+  if (el) el.scrollIntoView({ block:'nearest', behavior:'smooth' });
+}
+
+// ─── RENAME ───────────────────────────────────────────────────────────────────
+function renameTeam(idx, val) {
+  teamNames[idx] = val || `Team ${idx+1}`;
+  document.querySelectorAll(`.award-btn.t${idx+1}`).forEach(b => b.textContent = teamNames[idx]);
+}
+
+// ─── RESET ALL ────────────────────────────────────────────────────────────────
+function resetAll() {
+  if (!confirm('Reset all scores and awards?')) return;
+  teamScores = [0, 0, 0];
+  state.forEach((s, qi) => {
+    s.revealed = !!QS[qi].techQ;
+    s.awards   = [];
+  });
+  refreshScoreboard();
+  goTo(0);
+}
+
+init();
+</script>
+</body>
+</html>
