@@ -68,6 +68,10 @@ html,body{height:100%;font-family:'Segoe UI',Arial,sans-serif;background:var(--n
 .ans-row.revealed .ans-pts{display:block}
 .ans-row.revealed .award-btns{display:flex}
 
+/* ══ Explanation box (technical round) ══ */
+.q-explanation{margin-top:.7rem;background:rgba(39,174,96,.08);border:1.5px solid rgba(39,174,96,.4);border-radius:10px;padding:.75rem 1rem;font-size:.88rem;line-height:1.5;color:rgba(255,255,255,.88)}
+.q-explanation .exp-label{display:block;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--green);font-weight:800;margin-bottom:.3rem}
+
 /* ══ SIDEBAR ══ */
 #sidebar{width:230px;flex-shrink:0;display:flex;flex-direction:column;background:var(--panel);overflow:hidden}
 .sb-header{flex-shrink:0;padding:.65rem .9rem .4rem;border-bottom:2px solid var(--border);font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--gray)}
@@ -131,6 +135,11 @@ html,body{height:100%;font-family:'Segoe UI',Arial,sans-serif;background:var(--n
         <button class="award-btn t1" id="qab-0" onclick="awardTechQ(0)">Titans</button>
         <button class="award-btn t2" id="qab-1" onclick="awardTechQ(1)">CAD</button>
         <button class="award-btn t3" id="qab-2" onclick="awardTechQ(2)">The Vibe Tribe</button>
+      </div>
+      <!-- technical round explanation, shown once answers are revealed -->
+      <div id="q-explanation" class="q-explanation" style="display:none">
+        <span class="exp-label">Explanation</span>
+        <span id="q-explanation-text"></span>
       </div>
     </div>
 
@@ -319,7 +328,8 @@ a:[
 {t:"B. The query should use SUM(Salary) instead of AVG(Salary) because averages cannot be calculated after grouping.",p:0,correct:false},
 {t:"C. The GROUP BY clause should come before the WHERE clause.",p:0,correct:false},
 {t:"D. The query is valid SQL and will return departments with an average salary greater than 50,000.",p:0,correct:false}
-   ]}
+   ],
+explanation:"AVG() is an aggregate function and cannot be used inside a WHERE clause, since WHERE filters individual rows before grouping/aggregation happens. To filter on an aggregated value like AVG(Salary), you must use HAVING, which filters groups after aggregation."}
 ];
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
@@ -362,6 +372,8 @@ function goTo(idx) {
   } else {
     awardBar.style.display = 'none';
   }
+
+  updateExplanationBox();
 
   // reveal bar: hide for tech questions
   const revealBtn  = document.getElementById('btn-reveal');
@@ -448,6 +460,7 @@ function resetAnswers() {
   }
   refreshScoreboard();
   buildAnswerRows(q, s);
+  updateExplanationBox();
 }
 
 // ─── TECH ROUND AWARD (question-level buttons) ────────────────────────────────
@@ -457,6 +470,25 @@ function awardTechQ(teamIdx) {
   if (correctIdx === -1) return;
   award(correctIdx, teamIdx);
   refreshTechAwardBar();
+  updateExplanationBox();
+}
+
+function updateExplanationBox() {
+  const q       = QS[cur];
+  const s       = state[cur];
+  const expBox  = document.getElementById('q-explanation');
+  const expText = document.getElementById('q-explanation-text');
+
+  const correctIdx = q.techQ ? q.a.findIndex(a => a.correct) : -1;
+  const answered    = correctIdx !== -1 && s.awards[correctIdx] !== null;
+
+  if (q.techQ && q.explanation && answered) {
+    expText.textContent  = q.explanation;
+    expBox.style.display = 'block';
+  } else {
+    expText.textContent  = '';
+    expBox.style.display = 'none';
+  }
 }
 
 function refreshTechAwardBar() {
